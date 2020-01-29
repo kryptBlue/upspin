@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build darwin linux freebsd netbsd
+// +build !windows
 
 package main
 
@@ -39,6 +39,7 @@ var errs = []struct {
 	{"no such", syscall.ENOENT},
 	{"permission", syscall.EPERM},
 	{"not empty", syscall.ENOTEMPTY},
+	{"sequence number", syscall.EEXIST},
 }
 
 var errnoToKind = map[syscall.Errno]errors.Kind{
@@ -73,7 +74,8 @@ func e2e(err error) *errnoError {
 		if e, ok := kindToErrno[ue.Kind]; ok {
 			errno = e
 		}
-	} else {
+	}
+	if errno == syscall.EIO {
 		for _, e := range errs {
 			if strings.Contains(err.Error(), e.str) {
 				errno = e.errno
@@ -83,6 +85,10 @@ func e2e(err error) *errnoError {
 	}
 	log.Debug.Println(err.Error())
 	return &errnoError{errno, err}
+}
+
+func unsupported(err error) *errnoError {
+	return &errnoError{syscall.ENOTSUP, err}
 }
 
 // classify returns the Kind of error whether or not this is from the upspin errors pkg.

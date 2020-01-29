@@ -12,14 +12,33 @@ package testutil // import "upspin.io/test/testutil"
 import (
 	"go/build"
 	"log"
+	"net"
+	"os"
 	"path/filepath"
 )
 
 // Repo returns the local filename of a file in the Upspin repository.
 func Repo(dir ...string) string {
-	p, err := build.Import("upspin.io", "", build.FindOnly)
+	wd, _ := os.Getwd()
+	p, err := build.Import("upspin.io/upspin", wd, build.FindOnly)
 	if err != nil {
 		log.Fatal(err)
 	}
-	return filepath.Join(p.Dir, filepath.Join(dir...))
+	return filepath.Join(filepath.Dir(p.Dir), filepath.Join(dir...))
+}
+
+// PickPort listens to an available port on localhost, closes the listener, and
+// returns the port number. This function may be used for finding an available
+// port for tests that use the network.
+func PickPort() (string, error) {
+	listener, err := net.Listen("tcp", "localhost:0")
+	if err != nil {
+		return "", err
+	}
+	defer listener.Close()
+	_, port, err := net.SplitHostPort(listener.Addr().String())
+	if err != nil {
+		return "", err
+	}
+	return port, err
 }
